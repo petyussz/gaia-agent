@@ -16,6 +16,8 @@ services:
       # Blank disables auth and logs a warning at boot. Set it: openssl rand -hex 24
       GAIA_ACCESS_TOKEN: ${GAIA_ACCESS_TOKEN:-}
       GAIA_HISTORY_WINDOW: ${GAIA_HISTORY_WINDOW:-24}
+      # Default timezone for get_date. Without it the container reports UTC.
+      GAIA_TIMEZONE: ${GAIA_TIMEZONE:-Europe/Berlin}
       GAIA_TOOLS: ${GAIA_TOOLS:-get_date,get_weather,search_web}
       # Server-side only. Never exposed to the browser, never VITE_-prefixed.
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
