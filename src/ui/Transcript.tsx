@@ -13,6 +13,11 @@ export interface Line {
 interface TranscriptProps {
   readonly lines: readonly Line[];
   readonly streaming: string;
+  /**
+   * Owned by the parent so a wheel event anywhere over the stage can scroll this element. Most
+   * of the screen is the avatar and empty space, and a wheel there would otherwise do nothing.
+   */
+  readonly scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /** Distance from the bottom, in px, within which the view still counts as "following". */
@@ -26,8 +31,7 @@ const STICK_THRESHOLD = 56;
  * an age-based fade renders old lines invisible (and previously unmounted them entirely), so
  * there was nothing left to scroll back to.
  */
-export function Transcript({ lines, streaming }: TranscriptProps): React.ReactElement {
-  const scrollRef = useRef<HTMLDivElement>(null);
+export function Transcript({ lines, streaming, scrollRef }: TranscriptProps): React.ReactElement {
   const [scrolled, setScrolled] = useState(false);
   // Whether the view should follow new output. Kept in a ref so it can be read during the
   // scroll effect without making that effect re-run.
@@ -40,7 +44,7 @@ export function Transcript({ lines, streaming }: TranscriptProps): React.ReactEl
     setScrolled(element.scrollTop > 4);
     following.current =
       element.scrollHeight - element.scrollTop - element.clientHeight < STICK_THRESHOLD;
-  }, []);
+  }, [scrollRef]);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -48,7 +52,7 @@ export function Transcript({ lines, streaming }: TranscriptProps): React.ReactEl
     // yank them back down mid-sentence every time a token arrived.
     if (!element || !following.current) return;
     element.scrollTop = element.scrollHeight;
-  }, [lines.length, streaming]);
+  }, [lines.length, streaming, scrollRef]);
 
   return (
     <div

@@ -41,7 +41,20 @@ export function App(): React.ReactElement {
   const [notice, setNotice] = useState('');
 
   const abortRef = useRef<AbortController | null>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
   const { intensity, noteToken } = useIntensity(busy);
+
+  /**
+   * The transcript occupies only the lower part of the screen, but the whole stage should feel
+   * scrollable — a wheel over the avatar or the empty space above the text would otherwise do
+   * nothing at all, which reads as "the history is stuck".
+   */
+  const onStageWheel = useCallback((event: React.WheelEvent) => {
+    const element = transcriptRef.current;
+    // Inside the transcript the browser already scrolls it natively; doing both would double.
+    if (!element || element.contains(event.target as Node)) return;
+    element.scrollTop += event.deltaY;
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset['theme'] = theme;
@@ -193,12 +206,12 @@ export function App(): React.ReactElement {
         />
       </header>
 
-      <main className="stage">
+      <main className="stage" onWheel={onStageWheel}>
         <div className="crystal-frame">
           <CrystalNetwork intensity={intensity} theme={theme} />
         </div>
 
-        <Transcript lines={lines} streaming={streaming} />
+        <Transcript lines={lines} streaming={streaming} scrollRef={transcriptRef} />
       </main>
 
       <footer className="dock">

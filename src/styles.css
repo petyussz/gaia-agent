@@ -63,6 +63,12 @@ body {
 
 .app {
   --lift: 0px;
+  /*
+    Width of the reading column, shared by the transcript and the composer so they line up.
+    This is the one knob to turn if you want the conversation wider or narrower — past roughly
+    52rem, lines get long enough that the eye loses its place returning to the next one.
+  */
+  --column: min(100%, 46rem);
   display: grid;
   grid-template-rows: auto 1fr auto;
   /*
@@ -195,11 +201,12 @@ body {
   white-space: nowrap;
 }
 
-/* Ollama tags can be enormous (hf.co/unsloth/gemma-4-12b-it-qat-gguf:ud-q4_k_xl). Truncated to
-   one line so the panel keeps a fixed shape instead of reflowing around the model name. */
+/* Ollama tags can be enormous (hf.co/unsloth/gemma-4-12b-it-qat-gguf:ud-q4_k_xl). The registry
+   prefix is already stripped in StatusPanel; this is the backstop for a still-long name, sized
+   to leave room for the unload countdown that follows it. */
 .status-faint {
   color: var(--ink-faint);
-  max-width: 46ch;
+  max-width: 64ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -266,6 +273,9 @@ body {
 .transcript {
   display: flex;
   flex-direction: column;
+  /* Centres the column on the page. Every line takes the full column width, so their left
+     edges still align — centring each line individually would leave a ragged margin. */
+  align-items: center;
   gap: 10px;
   min-height: 0;
   min-width: 0;
@@ -321,7 +331,8 @@ body {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-width: 68ch;
+  width: 100%;
+  max-width: var(--column);
 }
 
 .line-user {
@@ -394,10 +405,13 @@ body {
 .dock {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
 }
 
 .notice {
+  width: 100%;
+  max-width: var(--column);
   font-size: 11px;
   letter-spacing: 0.06em;
   color: var(--bad);
@@ -407,6 +421,8 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
+  max-width: var(--column);
   border-top: 1px solid var(--rule);
   padding-top: 12px;
 }
