@@ -1,0 +1,53 @@
+# Ollama is NOT defined here — it already runs on the host. This file describes only G.A.I.A.
+services:
+  gaia:
+    build: .
+    image: gaia-agent:local
+    # 8787 belongs to the sibling generative-storyteller deployment on this machine.
+    ports:
+      - '${PORT:-8788}:8788'
+
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8788
+      # Same wiring as the generative-storyteller deployment already running on this host.
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      GAIA_MODEL: ${GAIA_MODEL:-}
+      # Blank disables auth and logs a warning at boot. Set it: openssl rand -hex 24
+      GAIA_ACCESS_TOKEN: ${GAIA_ACCESS_TOKEN:-}
+      GAIA_HISTORY_WINDOW: ${GAIA_HISTORY_WINDOW:-24}
+      GAIA_TOOLS: ${GAIA_TOOLS:-get_date,get_weather,search_web}
+      # Server-side only. Never exposed to the browser, never VITE_-prefixed.
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+
+    # Reaches Ollama on the Docker host. On Linux this mapping is not injected automatically.
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+    volumes:
+      # Session store. Must be writable by uid 1000 (the image's `node` user).
+      - ./data:/app/data
+      # Persona, editable on the host and re-read on the next turn without a restart.
+      - ./system_prompt.md:/app/system_prompt.md:ro
+
+    # The only writable paths are the data mount and /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8788/api/auth/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
