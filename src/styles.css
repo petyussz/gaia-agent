@@ -35,6 +35,15 @@ body,
   height: 100%;
 }
 
+/* Mobile browser chrome shrinks the visual viewport as you scroll; dvh tracks it, vh does not. */
+@supports (height: 100dvh) {
+  html,
+  body,
+  #root {
+    height: 100dvh;
+  }
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -56,8 +65,16 @@ body {
   --lift: 0px;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  /*
+    `minmax(0, 1fr)`, not the implicit `auto`. An auto track is sized to its content's
+    max-content width, and `white-space: pre-wrap` reports max-content as the paragraph's full
+    unwrapped length — so a long reply silently widens the column to ~1000px and everything past
+    the viewport edge gets clipped by the overflow rule below.
+  */
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
-  padding: 22px 26px 18px;
+  padding: max(22px, env(safe-area-inset-top)) max(26px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom)) max(26px, env(safe-area-inset-left));
   gap: 8px;
   overflow: hidden;
 }
@@ -70,13 +87,19 @@ body {
   /* Above the canvas: the crystal frame slides up into this row as the conversation grows. */
   position: relative;
   z-index: 2;
+  /* Grid and flex children default to min-width:auto, so a long model name would force the row
+     wider than the viewport and the app's overflow:hidden would clip the whole right edge. */
+  min-width: 0;
 }
 
 .stage {
   position: relative;
   display: grid;
   grid-template-rows: auto 1fr;
+  /* Same reason as .app — this is the track that actually held the transcript open. */
+  grid-template-columns: minmax(0, 1fr);
   min-height: 0;
+  min-width: 0;
   gap: 4px;
 }
 
@@ -110,6 +133,7 @@ body {
   color: var(--ink-soft);
   text-transform: lowercase;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
 }
 
 .status-title {
@@ -171,8 +195,14 @@ body {
   white-space: nowrap;
 }
 
+/* Ollama tags can be enormous (hf.co/unsloth/gemma-4-12b-it-qat-gguf:ud-q4_k_xl). Truncated to
+   one line so the panel keeps a fixed shape instead of reflowing around the model name. */
 .status-faint {
   color: var(--ink-faint);
+  max-width: 46ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @keyframes soft-pulse {
@@ -196,6 +226,7 @@ body {
   color: var(--ink-soft);
   flex-wrap: wrap;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .selector-select,
@@ -209,6 +240,12 @@ body {
   padding: 4px 8px;
   cursor: pointer;
   max-width: 320px;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.selector-theme {
+  flex: none;
 }
 
 .selector-select:disabled {
@@ -229,26 +266,61 @@ body {
 .transcript {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: 10px;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
-  scrollbar-width: none;
+  overscroll-behavior: contain;
   padding: 8px 0 4px;
-  /* Reinforces the per-line fade so the topmost visible line dissolves into the page rather
-     than being clipped by the scroll edge. */
-  mask-image: linear-gradient(to bottom, transparent 0%, black 14%);
 }
 
+/*
+  Holds the conversation against the bottom while short, without `justify-content: flex-end`.
+  That property looks equivalent but breaks scrolling: once content overflows, the part pushed
+  past the start edge becomes unreachable.
+*/
+.transcript > :first-child {
+  margin-top: auto;
+}
+
+/*
+  The dissolve. Applied only once scrolled away from the top, so the oldest line becomes fully
+  readable when you scroll all the way back rather than being permanently veiled.
+*/
+.transcript.is-scrolled {
+  mask-image: linear-gradient(to bottom, transparent 0, black 76px);
+}
+
+/* Hidden by default to keep the composition clean; shown discreetly where there is a mouse,
+   since without it there is no hint that history exists above. */
 .transcript::-webkit-scrollbar {
-  display: none;
+  width: 0;
+}
+
+@media (pointer: fine) {
+  .transcript {
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule) transparent;
+  }
+
+  .transcript::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .transcript::-webkit-scrollbar-thumb {
+    background: var(--rule);
+    border-radius: 3px;
+  }
+
+  .transcript::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 .line {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  transition: opacity 700ms ease;
   max-width: 68ch;
 }
 
@@ -405,6 +477,8 @@ body {
 
 .gate-input {
   font: inherit;
+  /* 16px minimum: iOS Safari zooms the whole page when focusing a smaller input. */
+  font-size: 16px;
   color: var(--ink);
   background: transparent;
   border: 1px solid var(--rule);
@@ -440,9 +514,74 @@ body {
   color: var(--bad);
 }
 
+/* ── Narrow screens ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .app {
+    padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    gap: 6px;
+  }
+
+  /* Side by side, the status block and a full Ollama tag cannot both fit. Stacking is the only
+     honest option; squeezing them onto one row truncates both. */
+  .hud {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .selector {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .selector-select {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .selector-loading,
+  .selector-warning {
+    display: none;
+  }
+
+  .status-faint {
+    max-width: 100%;
+  }
+
+  .status-bar {
+    width: 48px;
+  }
+
+  .crystal-frame {
+    height: clamp(130px, 22vh, 210px);
+    /* The frame is much shorter here, so the desktop lift would drag it clean through the HUD. */
+    transform: translateY(calc(-1 * min(var(--lift), 36px)));
+  }
+
+  .line {
+    max-width: 100%;
+  }
+
+  .line-agent,
+  .composer-input {
+    font-size: 16px;
+  }
+
+  .transcript {
+    gap: 8px;
+  }
+
+  .composer {
+    gap: 8px;
+    padding-top: 10px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .crystal-frame,
-  .line,
   .status-bar::after {
     transition: none;
   }
