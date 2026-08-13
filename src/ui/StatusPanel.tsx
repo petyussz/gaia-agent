@@ -12,6 +12,17 @@ function formatCountdown(expiresAt: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+/**
+ * Drops the registry and org prefix from an Ollama tag.
+ *
+ * `hf.co/unsloth/gemma-4-12b-it-qat-gguf:ud-q4_k_xl` is almost all boilerplate; only the last
+ * segment identifies the model, and the full string is wide enough to swallow the status line.
+ */
+function shortModelName(name: string): string {
+  const segments = name.split('/');
+  return segments[segments.length - 1] ?? name;
+}
+
 interface StatusPanelProps {
   readonly telemetry: TelemetryFrame | null;
   readonly connected: boolean;
@@ -76,8 +87,8 @@ export function StatusPanel({ telemetry, connected }: StatusPanelProps): React.R
       ) : null}
 
       {telemetry?.model ? (
-        <div className="status-row status-faint">
-          {telemetry.model.name}
+        <div className="status-row status-faint" title={telemetry.model.name}>
+          {shortModelName(telemetry.model.name)}
           {telemetry.model.expiresAt !== null
             ? ` · unloads in ${formatCountdown(telemetry.model.expiresAt)}`
             : ''}
