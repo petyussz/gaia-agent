@@ -55,7 +55,6 @@ src/server/            turn loop, session, prompt, tools, telemetry
 src/animation/         the crystal lattice (p5, instance mode)
 src/ui/                status panel, transcript, composer, gate
 src/shared/            wire types + NDJSON reader used by both sides
-prototypes/            the original hand-built animations and UI sketch
 ```
 
 ---
