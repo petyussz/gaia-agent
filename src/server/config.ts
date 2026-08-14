@@ -37,6 +37,14 @@ export const config = {
 
   systemPromptPath: resolve(str('GAIA_SYSTEM_PROMPT_PATH', './system_prompt.md')),
 
+  /**
+   * IANA zone `get_date` uses when the model does not name one.
+   *
+   * A container has no timezone configured, so anything relying on the system zone silently
+   * reports UTC — rarely what the operator meant by "what time is it".
+   */
+  timezone: str('GAIA_TIMEZONE', 'Europe/Berlin'),
+
   dataDir,
   sessionFile: resolve(dataDir, 'sessions.json'),
   historyWindow: int('GAIA_HISTORY_WINDOW', 24),
